@@ -9,6 +9,10 @@ struct Pair
     X first;
     Y second;
 
+    bool operator < (X const& x) const
+    {
+        return first < x;
+    }
 };
 
 template <typename X, typename Y>
@@ -17,11 +21,6 @@ bool operator < (X const& x, Pair<X, Y> const& pair)
     return x < pair.first;
 }
 
-template <typename X, typename Y>
-bool operator < (Pair<X, Y> const& pair, X const& x)
-{
-    return pair.first < x;
-}
 
 template <typename X, typename Y>
 Pair<X, Y> MakePair(X x, Y y)

@@ -6,15 +6,14 @@ int* partitionA(int* begin, int* end)
 {
     int pivot = *begin;
     int* pivotDestination = begin;
-    int* cursor = begin + 1;
+    int* cursor = begin;
 
-    while (cursor != end)
+    while (++cursor != end)
     {
         if (*cursor <= pivot)
         {
             std::swap(*(++pivotDestination), *cursor);
         }
-        ++cursor;
     }
     std::swap(*pivotDestination, *begin);
     return pivotDestination;
@@ -25,9 +24,9 @@ void quicksortA(int* begin, int* end)
     auto numElements = end - begin;
     if (numElements < 2) { return; }
 
-    int* partition = partitionA(begin, end);
-    quicksortA(begin, partition);
-    quicksortA(partition, end);
+    int* pivot = partitionA(begin, end);
+    quicksortA(begin, pivot);
+    quicksortA(++pivot, end);
 }
 
 
@@ -37,15 +36,14 @@ T* partitionB(T* begin, T* end)
 {
     T pivot = *begin;
     T* pivotDestination = begin;
-    T* cursor = begin + 1;
+    T* cursor = begin;
 
-    while (cursor != end)
+    while (++cursor != end)
     {
         if (*cursor <= pivot)
         {
             std::swap(*(++pivotDestination), *cursor);
         }
-        ++cursor;
     }
     std::swap(*pivotDestination, *begin);
     return pivotDestination;
@@ -57,9 +55,9 @@ void quicksortB(T* begin, T* end)
     auto numElements = end - begin;
     if (numElements < 2) { return; }
 
-    T* partition = partitionB(begin, end);
-    quicksortB(begin, partition);
-    quicksortB(partition, end);
+    T* pivot = partitionB(begin, end);
+    quicksortB(begin, pivot);
+    quicksortB(++pivot, end);
 }
 
 // ---------------------------------------------
@@ -94,8 +92,8 @@ void quicksortC(It begin, It end)
 
 int main(int argc, char* argv[])
 {
-    std::vector<int> values = {23,5,567,8,823,12,2,5,6,7,989,2,1223,5,71,1};
-    // std::list<int> values = {23,5,567,8,823,12,2,5,6,7,989,2,1223,5,71,1};
+    // std::vector<int> values = {23,5,567,8,823,12,2,5,6,7,989,2,1223,5,71,1};
+    std::list<int> values = {23,5,567,8,823,12,2,5,6,7,989,2,1223,5,71,1};
 
     quicksortC(std::begin(values), std::end(values));
 

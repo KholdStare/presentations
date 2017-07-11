@@ -179,7 +179,7 @@ size_t size() const { return size_; }
 
 ## Template instantiation
 
-> When a template is used, the compiler generates a new concrete type
+> When a template is used, the compiler generates a new concrete type/function
 > for the particular type argument.
 
 ## Polymorphism
@@ -248,7 +248,6 @@ Taxonomy of iterators based on traversal properties:
 * InputIterator
 * ForwardIterator
 * BidirectionalIterator
-* RandomAccessIterator
 * RandomAccessIterator
 
 ## STL
@@ -350,7 +349,441 @@ public:
 
 # C++ Templates Part 2 - Metaprogramming
 
-## wololo
+## Metaprogramming
 
-trololo
+* What is it?
+* Why do it?
+* How to do it?
 
+## What is it?
+
+> Code not executed at runtime but compile-time, to aid the programmer
+
+## Why do it?
+
+* To reduce boilerplate
+* To enforce constraints
+* To precompute things
+
+## How to do it?
+
+* Metafunctions
+* Traits
+* Tag dispatch
+* Variadic templates
+* CRTP
+* SFINAE
+
+## Low level building blocks
+
+* type aliases
+* `constexpr`
+* template type substitution
+* template specialization
+* type inference
+* overloading
+
+# Metafunctions
+
+## Metafunctions
+
+> A metafunction is conceptually a function at the type level
+
+## Values at type level
+
+Lift regular values into the type level
+
+```{.cpp}
+struct true_type {
+    static constexpr bool value = true;
+};
+
+struct false_type {
+    static constexpr bool value = false;
+};
+```
+
+## Is pointer
+
+Specialize on the case we are trying to detect
+
+```{.cpp}
+template <typename T>
+struct is_pointer : false_type { };
+
+template <typename T>
+struct is_pointer<T*> : true_type { };
+
+static_assert(is_pointer<int*>::value == true, "");
+static_assert(is_pointer<char>::value == false, "");
+```
+
+## Is same
+
+Specialize on the case we are trying to detect
+
+```{.cpp}
+template <typename T, typename U>
+struct is_same : false_type { };
+
+template <typename T>
+struct is_same<T, T> : true_type { };
+
+static_assert(is_same<int, int>::value == true, "");
+static_assert(is_same<char, int>::value == false, "");
+```
+
+## Remove const
+
+```{.cpp}
+template <typename T>
+struct remove_const {
+    using type = T;
+};
+
+template <typename T>
+struct remove_const<T const> {
+    using type = T;
+};
+
+static_assert(is_same<int, remove_const<int const>::type>::value, "");
+```
+
+# Traits
+
+## Traits
+
+How does STL handle iterator "taxonomy"?
+
+* InputIterator
+* ForwardIterator
+* BidirectionalIterator
+* RandomAccessIterator
+
+Let's look at `advance`
+
+## `Advance`
+
+```{.cpp}
+template <class InputIt, class Distance>
+void advance(InputIt& it, Distance n);
+```
+
+* Has to work for vector as well as linked list
+* Has to work efficiently
+
+## Advance first attempt
+
+```{.cpp}
+template <class InputIt, class Distance>
+void advance(InputIt& it, Distance n)
+{
+    it += n;
+}
+```
+
+Does not work for linked list
+
+## Advance second attempt
+
+```{.cpp}
+template <class InputIt, class Distance>
+void advance(InputIt& it, Distance n)
+{
+    for (Distance i = 0; i < n; ++n) {
+        ++it;
+    }
+}
+```
+
+Needlessly inefficient for random access iterators
+
+## [Iterator traits](http://en.cppreference.com/w/cpp/iterator/iterator_traits)
+
+STL has `std::iterator_traits<It>`
+
+```{.cpp}
+template <typename It>
+struct iterator_traits
+{
+    using difference_type = ...;
+    using value_type = ...;
+    using pointer = ...;
+    using reference = ...;
+    using iterator_category = ...;
+};
+```
+
+## [Iterator categories](http://en.cppreference.com/w/cpp/iterator/iterator_tags)
+
+* Iterator categories as "tags" - empty structs
+* Different types can be used for specialization!
+
+```{.cpp}
+struct input_iterator_tag { };
+struct output_iterator_tag { };
+struct forward_iterator_tag : public input_iterator_tag { };
+struct bidirectional_iterator_tag : public forward_iterator_tag { };
+struct random_access_iterator_tag : public bidirectional_iterator_tag { };
+```
+
+## Advance third attempt
+
+```{.cpp}
+template <class InputIt, class Distance>
+void advance(InputIt& it, Distance n) {
+    using category_tag =
+        typename std::iterator_traits<InputIt>::iterator_category;
+    constexpr bool isRandomAccess = 
+        std::is_same<category_tag, std::random_access_iterator_tag>::value;
+
+    if (isRandomAccess) {
+        it += n;
+    } else {
+        for (Distance i = 0; i < n; ++n) {
+            ++it;
+        }
+    }
+}
+```
+
+Still does not compile for linked list!
+
+# Tag Dispatch
+
+## Tag Dispatch
+
+> Picking different code based on a tag type, using overloading
+
+## Create functions to pick
+
+```{.cpp}
+template <class It, class Distance>
+void advance_impl(std::random_access_iterator_tag, It& it, Distance n)
+{
+    it += n;
+}
+
+template <class It, class Distance>
+void advance_impl(std::input_iterator_tag, It& it, Distance n)
+{
+    for (Distance i = 0; i < n; ++n) {
+        ++it;
+    }
+}
+```
+
+## Dispatch with tags
+
+```{.cpp}
+template <class InputIt, class Distance>
+void advance(InputIt& it, Distance n) {
+    using category_tag =
+        typename std::iterator_traits<InputIt>::iterator_category;
+    advance_impl(category_tag{}, it, n);
+}
+```
+
+# Variadic Templates
+
+## Variadic Templates
+
+> Templates that can take any number of template parameters
+
+## Variadic Logger
+
+Overloading + Variadic templates
+
+```{.cpp}
+void log()
+{
+    std::cout << std::endl;
+}
+
+template <typename T, typename... Ts>
+void log(T const& val, Ts const&... rest)
+{
+    std::cout << val << " ";
+    log(rest...);
+}
+```
+
+## Tuple
+
+```{.cpp}
+template <typename... Ts>
+struct Tuple { };
+
+template <typename T, typename... Ts>
+struct Tuple<T, Ts...> : private Tuple<Ts...>
+{
+private:
+    T val_;
+public:
+    Tuple(T val, Ts... rest)
+        : Tuple<Ts...>(std::move(rest)...)
+        , val_(std::move(val))
+    { }
+};
+```
+
+# CRTP
+
+## CRTP
+
+* "Curiously Recurring Template Pattern"
+* Allows compile-time subtype polymorphism
+* No virtual functions required!
+
+## When to CRTP?
+
+* If you want to inherit functionality
+* But know final Derived type at all times
+
+## Comparison Operators
+
+```{.cpp}
+struct OrderEntry
+{
+    uint32_t price;
+    uint32_t timestamp;
+    
+    bool operator < (OrderEntry const& other) const {
+        return price < other.price
+            || ((price == other.price) && timestamp < other.timestamp);
+    }
+
+    bool operator == (OrderEntry const& other) const {
+        return price == other.price && timestamp == other.timestamp;
+    }
+};
+```
+    
+What about `<=`, `>`, `>=`, `!=` ?
+
+## Comparison CRTP
+
+```{.cpp}
+template <typename Derived>
+struct ComparisonBase
+{
+private:
+    Derived const& getDerived() const {
+        return static_cast<Derived const&>(*this);
+    }
+    
+public:
+    bool operator >= (Derived const& other) const {
+        return !(getDerived() < other);
+    }
+
+    bool operator != (Derived const& other) const {
+        return !(getDerived() == other);
+    }
+};
+```
+
+## Comparison Operators
+
+```{.cpp}
+struct OrderEntry : ComparisonBase<OrderEntry>
+{
+    uint32_t price;
+    uint32_t timestamp;
+    
+    bool operator < (OrderEntry const& other) const {
+        return price < other.price
+            || ((price == other.price) && timestamp < other.timestamp);
+    }
+
+    bool operator == (OrderEntry const& other) const {
+        return price == other.price && timestamp == other.timestamp;
+    }
+};
+```
+
+# SFINAE
+
+## SFINAE
+
+> Substitution Failure Is Not An Error
+
+## {data-background="../images/Wat.jpeg"}
+
+## Template Argument Deduction
+
+> When the compiler picks a template to instantiate, it tries to substitute types into the parameters.
+
+```{.cpp}
+template <typename T>
+void printIsVector(std::vector<T> const&)
+{
+    std::cout << "a vector!" << std::endl;
+}
+
+template <typename T>
+void printIsVector(T const&)
+{
+    std::cout << "not a vector!" << std::endl;
+}
+
+```
+
+## SFINAE
+
+> If there are several possible templates, the compiler will try all of them. If substitution fails for one, it moves onto the next without generating an error, until it succeeds. If ALL attempts fail, only then is an error generated.
+
+This can be used for meta-programming purposes.
+
+## Enable If
+
+STL provides `enable_if` for SFINAE:
+
+```{.cpp}
+template <bool condition, typename T>
+struct enable_if;
+
+template <typename T=void>
+struct enable_if<true, T>
+{
+    using type = T;
+};
+
+template <typename T=void>
+struct enable_if<false, T>
+{
+
+};
+```
+
+## Tag dispatch alternative
+
+```{.cpp}
+template <class It, class Distance>
+typename std::enable_if<std::is_same<
+        std::random_access_iterator_tag,
+        typename std::iterator_traits<It>::iterator_category
+    >::value>::type
+advance(It& it, Distance n)
+{
+    it += n;
+}
+
+template <class It, class Distance>
+typename std::enable_if<!std::is_same<
+        std::random_access_iterator_tag,
+        typename std::iterator_traits<It>::iterator_category
+    >::value>::type
+advance(It& it, Distance n)
+{
+    for (Distance i = 0; i < n; ++n) {
+        ++it;
+    }
+}
+```
+
+## SFINAE
+
+* Holy hell was that ugly!
+* There are other ways to use SFINAE but most of the time can be achieved with tag dispatch more cleanly
+* For best usage of SFINAE see [`void_t`](http://en.cppreference.com/w/cpp/types/void_t)
