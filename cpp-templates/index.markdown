@@ -403,6 +403,12 @@ struct false_type {
 };
 ```
 
+Usage:
+
+```{.cpp}
+bool b = true_type::value;
+```
+
 ## Is pointer
 
 Specialize on the case we are trying to detect
