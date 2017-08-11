@@ -136,7 +136,7 @@ c = a + b;
 
 * `a`, `b` and `c` are all *lvalue*s
    * they have a name
-* the result of `a + b` is an *rvalue*
+* the result of `a+b` is an *rvalue*
    * it is temporary, with no name
 
 ## References
@@ -153,3 +153,166 @@ Vector const& cref = a + b; // ok
 * `&` is an *lvalue* reference
 * `&&` is an *rvalue* reference
 * `const &` is special and can also bind and extend the lifetime of temporaries
+
+## Optimizing by overloading
+
+* We can now overload on *rvalue* references `&&`
+* Temporaries go to move constructor, not copy
+
+```{.cpp}
+class Vector
+{
+public:
+    Vector(Vector const& other);
+    Vector(Vector&& other);
+    
+    // ...
+};
+```
+
+## Moving an lvalue
+
+What if you want to move an lvalue?
+
+```{.cpp}
+void gimmeUniquePtr(std::unique_ptr<int> p);
+
+std::unique_ptr<int> i{new int(42)};
+gimmeUniquePtr(i); // ERROR!
+```
+
+## std::move
+
+* `std::move` casts an lvalue ref to an rvalue ref
+* Picks the right overload for constructor
+
+```{.cpp}
+void gimmeUniquePtr(std::unique_ptr<int> p);
+
+std::unique_ptr<int> i{new int(42)};
+gimmeUniquePtr(std::move(i)); // OK!
+```
+
+## std::move
+
+* `std::move` is just a cast!
+* Real work done by the move constructor
+
+```{.cpp}
+template <typename T>
+T&& move(T& v) { return static_cast<T&&>(v); }
+```
+
+## Summary
+
+* Moves optimize ownership transfer
+* Better value semantics
+* Great for unique resources
+* `std::move` is a cast
+* Move constructor is an overload on `&&`
+   * Shallow copy
+   * Nullify source
+   
+# Forwarding
+
+## Templates
+
+* What if you were writing templates?
+* And need to handle lvalues AND rvalues?
+
+## Logging
+
+```{.cpp}
+void log()
+{
+    std::cout << std::endl;
+}
+
+template <typename T, typename... Ts>
+void log(T const& val, Ts const&... rest)
+{
+    std::cout << val << " ";
+    log(rest...);
+}
+```
+
+## Call logging
+
+* Does this work?
+
+```{.cpp}
+template <typename F, typename... Args>
+auto logAndCall(F& func, Args&... args)
+{
+    log(args...);
+    return func(args...);
+}
+```
+
+## Call logging
+
+```{.cpp}
+template <typename F, typename... Args>
+auto logAndCall(F& func, Args&... args);
+
+logAndCall(std::min, 42, 23); // ERROR!
+```
+
+## Perfect forwarding
+
+* Note the `Args&&` and `std::forward`
+* Is **not** an rvalue reference!!!
+* Called a "forwarding" or "universal" reference
+* Only occurs if deduced type is followed by `&&`
+
+```{.cpp}
+template <typename F, typename... Args>
+auto logAndCall(F& func, Args&&... args)
+{
+    log(args...);
+    return func(std::forward<Args>(args)...);
+}
+```
+
+## Perfect forwarding
+
+```{.cpp}
+logAndCall(min, a, b);
+
+// instantiates
+int logAndCall<F, int&, int&>(F&, int&, int&);
+```
+
+```{.cpp}
+logAndCall(min, 42, 23);
+
+// instantiates
+int logAndCall<F, int, int>(F&, int&&, int&&);
+```
+
+## std::forward
+
+```{.cpp}
+template <typename T, typename U>
+T&& forward(U& v) { return static_cast<T&&>(v); }
+```
+
+* `v` is always an lvalue reference
+* `T` template parameter allows "forcing" to lvalue or rvalue reference
+* "Beefier" generic `std::move`
+
+## How?
+
+* Reference collapsing
+
+* `(T&)&   = T&`
+* `(T&)&&  = T&`
+* `(T&&)&  = T&`
+* `(T&&)&& = T&&`
+
+## Summary
+
+* Generic code may handle lvalues and rvalues
+* Code that wraps/forwards to other code
+* Use perfect forwarding!
+* Template type deduction + `&&` == universal reference
