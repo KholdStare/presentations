@@ -1,0 +1,218 @@
+<!doctype html>
+<html lang="en">
+
+	<head>
+		<meta charset="utf-8">
+
+		<title>C++ Move Semantics</title>
+
+		<meta name="author" content="Alexander Kondratskiy">
+
+		<meta name="apple-mobile-web-app-capable" content="yes" />
+		<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+
+		<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+
+		<link rel="stylesheet" href="../reveal/css/reveal.min.css">
+		<link rel="stylesheet" href="../reveal/css/theme/moon.css" id="theme">
+
+		<!-- For syntax highlighting -->
+		<link rel="stylesheet" href="../reveal/lib/css/monokai_sublime.css">
+
+		<!-- If the query includes 'print-pdf', use the PDF print sheet -->
+		<script>
+			document.write( '<link rel="stylesheet" href="../reveal/css/print/' + ( window.location.search.match( /print-pdf/gi ) ? 'pdf' : 'paper' ) + '.css" type="text/css" media="print">' );
+		</script>
+
+		<!--[if lt IE 9]>
+		<script src="lib/js/html5shiv.js"></script>
+		<![endif]-->
+	</head>
+
+	<body>
+
+		<div class="reveal">
+
+			<!-- Any section element inside of this container is displayed as a slide -->
+			<div class="slides">
+
+<section><section id="c-move-semantics" class="titleslide slide level1"><h1>C++ Move Semantics</h1></section><section id="overview" class="slide level2">
+<h2>Overview</h2>
+<ul>
+<li>Why needed?</li>
+<li>How?</li>
+<li>Perfect forwarding</li>
+</ul>
+</section><section id="vector" class="slide level2">
+<h2>Vector</h2>
+<pre class="cpp"><code>class Vector {
+    double* storage_;
+    size_t  size_;
+
+public:
+    Vector(size_t numElements)
+        : storage_(new double[numElements])
+        , size_(numElements)
+    { }
+
+    ~Vector() { delete[] storage_; }
+
+    double&amp; operator[] (size_t i)       { return storage_[i]; }
+    size_t size() const { return size_; }
+};</code></pre>
+</section><section id="section" class="slide level2" data-background="images/copying-vector.svg">
+<h2></h2>
+</section><section id="copy-constructor" class="slide level2">
+<h2>Copy constructor</h2>
+<pre class="cpp"><code>Vector(size_t numElements)
+    : storage_(new double[numElements])
+    , size_(numElements)
+{ }
+
+Vector(Vector const&amp; other)
+    : Vector(other.size())
+{
+    std::copy_n(other.storage_, other.size_, storage_);
+}</code></pre>
+</section><section id="operator" class="slide level2">
+<h2>Operator +</h2>
+<pre class="cpp"><code>??? operator + (Vector const&amp; a, Vector const&amp; b);</code></pre>
+</section><section id="operator-1" class="slide level2">
+<h2>Operator +</h2>
+<pre class="cpp"><code>Vector operator + (Vector const&amp; a, Vector const&amp; b)
+{
+    // create result of same size
+    assert(a.size() == b.size());
+    Vector result(a.size());
+
+    // compute addition
+    std::transform(
+        a.begin(), a.end(), // input 1
+        b.begin(),          // input 2
+        result.begin(),     // result
+        std::plus&lt;double&gt;() // binary operation
+    );
+
+    return result; // ... but can we avoid the copy?
+}</code></pre>
+</section><section id="if-copy-is-made" class="slide level2">
+<h2>If copy is made</h2>
+<ul>
+<li>Make all the effort of copying</li>
+<li>Destroy immediately after</li>
+</ul>
+</section><section id="rvo-to-the-rescue" class="slide level2">
+<h2>RVO to the rescue</h2>
+<ul>
+<li>Return Value Optimization!</li>
+<li>Copy constructor is elided</li>
+<li>guaranteed by the C++ standard.</li>
+</ul>
+</section><section id="why-do-we-need-to-move" class="slide level2">
+<h2>Why do we need to move?</h2>
+<p>One reason is resources!</p>
+<ul>
+<li><code>std::unique_ptr&lt;T&gt;</code></li>
+<li><code>std::thread</code></li>
+<li>Other resource handles</li>
+</ul>
+<p>No way to copy, but need to <strong>transfer ownership</strong></p>
+</section><section id="transferring-ownership" class="slide level2">
+<h2>Transferring ownership</h2>
+<ul>
+<li>Only one user owns data</li>
+<li>Previous owner no longer owns anything</li>
+</ul>
+</section><section id="move-constructor" class="slide level2">
+<h2>Move constructor</h2>
+<ul>
+<li>A shallow copy</li>
+<li>Nullify the source</li>
+</ul>
+</section><section id="section-1" class="slide level2" data-background="images/moving-vector.svg">
+<h2></h2>
+</section><section id="move-constructor-1" class="slide level2">
+<h2>Move constructor</h2>
+<pre class="cpp"><code>Vector::Vector(Vector&amp;&amp; other)
+    // shallow copy
+    : storage_(other.storage_)
+    , size_(other.size_)
+{
+    // nullify source
+    other.storage_ = nullptr;
+    other.size_ = 0;
+}</code></pre>
+</section><section id="what-is" class="slide level2">
+<h2>What is &amp;&amp;?</h2>
+<ul>
+<li><em>Rvalue</em> reference</li>
+<li>Special reference that binds to temporary values</li>
+<li>What is an <em>rvalue</em>?</li>
+</ul>
+</section><section id="lvalues-and-rvalues" class="slide level2">
+<h2>Lvalues and Rvalues</h2>
+<pre class="cpp"><code>Vector a, b, c;
+c = a + b;</code></pre>
+<ul>
+<li><code>a</code>, <code>b</code> and <code>c</code> are all <em>lvalue</em>s
+<ul>
+<li>they have a name</li>
+</ul></li>
+<li>the result of <code>a + b</code> is an <em>rvalue</em>
+<ul>
+<li>it is temporary, with no name</li>
+</ul></li>
+</ul>
+</section><section id="references" class="slide level2">
+<h2>References</h2>
+<pre class="cpp"><code>Vector a, b, c;
+Vector&amp;  lref1 = a;     // ok
+Vector&amp;  lref2 = a + b; // ERROR
+Vector&amp;&amp; rref1 = a + b; // ok
+Vector&amp;&amp; rref2 = c;     // ERROR
+Vector const&amp; cref = a + b; // ok</code></pre>
+<ul>
+<li><code>&amp;</code> is an <em>lvalue</em> reference</li>
+<li><code>&amp;&amp;</code> is an <em>rvalue</em> reference</li>
+<li><code>const &amp;</code> is special and can also bind and extend the lifetime of temporaries</li>
+</ul>
+</section></section>
+
+			</div>
+
+		</div>
+
+		<script src="../reveal/lib/js/head.min.js"></script>
+		<script src="../reveal/js/reveal.min.js"></script>
+
+		<script>
+
+			// Full list of configuration options available here:
+			// https://github.com/hakimel/reveal.js#configuration
+			Reveal.initialize({
+				controls: true,
+				progress: true,
+				history: true,
+				center: true,
+
+				theme: Reveal.getQueryHash().theme, // available themes are in /css/theme
+				transition: Reveal.getQueryHash().transition || 'default', // default/cube/page/concave/zoom/linear/fade/none
+
+				// Optional libraries used to extend on reveal.js
+				dependencies: [
+					// { src: '../reveal/lib/js/classList.js', condition: function() { return !document.body.classList; } },
+					// { src: 'plugin/markdown/marked.js', condition: function() { return !!document.querySelector( '[data-markdown]' ); } },
+					// { src: 'plugin/markdown/markdown.js', condition: function() { return !!document.querySelector( '[data-markdown]' ); } },
+					{ src: '../reveal/plugin/highlight/highlight.js', async: true, callback: function() { hljs.initHighlightingOnLoad(); } },
+					// { src: '../reveal/plugin/zoom-js/zoom.js', async: true, condition: function() { return !!document.body.classList; } },
+					// { src: '../reveal/plugin/notes/notes.js', async: true, condition: function() { return !!document.body.classList; } }
+					// { src: 'plugin/search/search.js', async: true, condition: function() { return !!document.body.classList; } }
+					// { src: 'plugin/remotes/remotes.js', async: true, condition: function() { return !!document.body.classList; } }
+				]
+			});
+
+		</script>
+
+        
+	</body>
+</html>

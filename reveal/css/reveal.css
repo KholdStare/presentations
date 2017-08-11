@@ -1327,7 +1327,7 @@ body {
 		background-color: rgba( 0, 0, 0, 0 );
 		background-position: 50% 50%;
 		background-repeat: no-repeat;
-		background-size: cover;
+		background-size: contain;
 
 		-webkit-transition: all 800ms cubic-bezier(0.260, 0.860, 0.440, 0.985);
 		   -moz-transition: all 800ms cubic-bezier(0.260, 0.860, 0.440, 0.985);
