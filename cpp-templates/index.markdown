@@ -48,9 +48,9 @@ class NetworkOutput : DataOutput {
 };
 ```
 
-## {data-background="../images/InheritanceTree.svg"}
+## {data-background-image="../images/InheritanceTree.svg" data-background-size=contain}
 
-## {data-background="../images/InheritanceVenn.svg"}
+## {data-background-image="../images/InheritanceVenn.svg" data-background-size=contain}
 
 ## Liskov Substitution Principle
 
