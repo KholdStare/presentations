@@ -1,0 +1,13 @@
+.diff-container {
+  display: flex;
+}
+.reveal .diff-left {
+  flex: 1;
+  border: 0.2em solid #ff5733;
+  margin: 0 1em 0 0;
+}
+.reveal .diff-right {
+  flex: 1;
+  border: 0.2em solid #2ecc71;
+  margin: 0 0 0 1em;
+}
