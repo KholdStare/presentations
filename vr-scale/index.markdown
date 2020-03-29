@@ -1,6 +1,7 @@
 ---
 title: 'A Sense Of Scale In VR'
 scripts:
+  - https://code.jquery.com/jquery-3.4.1.slim.min.js
   - js/three.min.js
   - js/vr-scale.js
 ---
@@ -82,9 +83,9 @@ This parameter is now back in the hands of the artist
 * Neck model parameters
 * Player speed
 
-## {data-background="https://dl.dropboxusercontent.com/u/4337781/Blog/VrScale/TinyTuscany.jpg"}
+## {data-background="images/TinyTuscany.jpg"}
 
-## {data-background="https://dl.dropboxusercontent.com/u/4337781/Blog/VrScale/GiantTuscany.jpg"}
+## {data-background="images/GiantTuscany.jpg"}
 
 ## Warning and Conclusion
 

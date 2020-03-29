@@ -150,7 +150,7 @@ var createDefaultContext = function( canvasElem, isBinocular )
 var renderScene = function( context, scene )
 {
     var canvasElem = context.canvas;
-    var width = canvasElem.parentElement.scrollWidth;
+    var width = $(canvasElem).parent().width();
     var height = width / context.aspect;
 
     // make canvas responsive
@@ -551,8 +551,8 @@ var initScalingScene = function (context)
 
 var withCanvas = function( canvasId, initFunc, isBinocular )
 {
-    var canvasElement = document.getElementById(canvasId);
-    var context = createDefaultContext( canvasElement, isBinocular );
+    var canvasElement = $(canvasId);
+    var context = createDefaultContext( canvasElement.get(0), isBinocular );
     var renderer = context.renderer;
     renderer.enableScissorTest ( true );
     var scene = initFunc( context );
@@ -567,7 +567,7 @@ var withCanvas = function( canvasId, initFunc, isBinocular )
     renderScene(context, scene);
 };
 
-withCanvas( "scene-sphere", initSphereScene );
-withCanvas( "scene-parallax", initParallaxScene );
-withCanvas( "scene-convergence", initConvergenceScene, true );
-withCanvas( "scene-scaling", initScalingScene, true );
+withCanvas( "#scene-sphere", initSphereScene );
+withCanvas( "#scene-parallax", initParallaxScene );
+withCanvas( "#scene-convergence", initConvergenceScene, true );
+withCanvas( "#scene-scaling", initScalingScene, true );
