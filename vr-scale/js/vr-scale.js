@@ -90,6 +90,7 @@ var createDefaultContext = function( canvasElem, isBinocular )
                             ),
             width: canvasElem.width,
             height: canvasElem.height,
+            pixelRatio: window.devicePixelRatio,
             ortho:
             {
                 background: new THREE.Color().setRGB( 0.5, 0.5, 0.7 ),
@@ -167,10 +168,10 @@ var renderScene = function( context, scene )
     for (var ii = 0; ii < views.length; ii++)
     {
         var view = views[ii];
-        var viewLeft   = Math.floor(context.width  * view.left);
-        var viewBottom = Math.floor(context.height * view.bottom);
-        var viewWidth  = Math.floor(context.width  * view.width);
-        var viewHeight = Math.floor(context.height * view.height);
+        var viewLeft   = Math.floor(context.width  * context.pixelRatio * view.left);
+        var viewBottom = Math.floor(context.height * context.pixelRatio * view.bottom);
+        var viewWidth  = Math.floor(context.width  * context.pixelRatio * view.width);
+        var viewHeight = Math.floor(context.height * context.pixelRatio * view.height);
         renderer.setViewport( viewLeft, viewBottom, viewWidth, viewHeight );
         renderer.setScissor( viewLeft, viewBottom, viewWidth, viewHeight );
         renderer.setClearColor( view.background );
@@ -563,7 +564,7 @@ var withCanvas = function( canvasId, initFunc, isBinocular )
         timer = startRenderLoop(timer, context, scene);
     };
 
-    canvasElement.onclick = starter;
+    canvasElement.click(starter);
     renderScene(context, scene);
 };
 
